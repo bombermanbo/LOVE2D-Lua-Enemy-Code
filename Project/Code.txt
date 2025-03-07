@@ -1,0 +1,63 @@
+for i, e in ipairs(enemys) do  -- [1] for-loop starts here
+        e.distanceBetweenPlayerAndEnemy = distanceBetween(e:getX(), e:getY(), player.position.x, player.position.y)
+        e.distanceBetweenEnemyAndPlayer = distanceBetween(player.position.x, player.position.y, e:getX(), e:getY())
+        e.queryRadius = 2
+        e.distanceAlongLineToCheck = 2
+        e.querys = math.floor(e.distanceBetweenPlayerAndEnemy / e.distanceAlongLineToCheck)
+        e.isDead = false
+        e.animation:update(dt)
+        if (e:getX() - player.collider:getX()) / math.abs(e:getX() - player.collider:getX()) == 1 then
+            e.direction = 1
+        else
+            e.direction = -1
+        end
+        
+
+        if e.distanceBetweenPlayerAndEnemy < 17 or e.distanceBetweenEnemyAndPlayer < 17 then
+            player.collider:setX(player.startPosition.x)
+            player.collider:setY(player.startPosition.y)
+        end
+
+        for q = 0, e.querys do
+            e.pex = (player.position.x - e:getX()) / e.distanceBetweenPlayerAndEnemy
+            e.pey = (player.position.y - e:getY()) / e.distanceBetweenPlayerAndEnemy
+    
+            e.newX = e:getX() + e.pex * e.distanceAlongLineToCheck
+            e.newY = e:getY() + e.pey * e.distanceAlongLineToCheck
+
+            local currentCollider = world:queryCircleArea(e.newX, e.newY, e.queryRadius, {'Solid'})
+            if #currentCollider > 0 then
+                e.queryRadius = 0
+                e:setLinearVelocity(0, 0)
+                e.animation = e.animations.idle
+            else
+                if e.queryRadius == 2 then
+                    if e.distanceBetweenPlayerAndEnemy < enemyData.eyeSight then
+                        if e.isDead == false then
+                            e:setLinearVelocity(math.cos(angleBettween(player.position.x, player.position.y, e:getX(), e:getY())) * -1 * enemyData.speed * dt, 
+                                            math.sin(angleBettween(player.position.x, player.position.y, e:getX(), e:getY())) * -1 * enemyData.speed * dt)
+                        end
+                        e.animation = e.animations.jumpMove
+                    else
+                        e:setLinearVelocity(0, 0)
+                        e.animation = e.animations.idle
+                    end
+                end
+            end
+            e.distanceAlongLineToCheck = e.distanceAlongLineToCheck + 2
+        end
+    end
+    for i=#enemys, 1, -1 do
+        local e = enemys[i]
+        if e.health <= 0 then
+            if e.destroyTimer < e.destroyTime then
+                e.animation = e.animations.die
+                e.destroyTimer = e.destroyTimer + dt
+                e.isDead = true
+            else
+                e.isDead = true
+                e:destroy()
+                table.remove(enemys, i)
+            end
+        end
+    end
